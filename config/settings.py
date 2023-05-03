@@ -47,6 +47,10 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'core.apps.CoreConfig',
+    'store.apps.StoreConfig',
+
+    "phonenumber_field",
+
 ]
 
 MIDDLEWARE = [
