@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'djoser',
+    'django_filters',
     'core.apps.CoreConfig',
     'store.apps.StoreConfig',
 
@@ -144,6 +145,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'core.CustomUser'
 
 REST_FRAMEWORK = {
+
+    'COERCE_DECIMAL_TO_STRING': False,
     
     'DEFAULT_AUTHENTICATION_CLASSES': (
         

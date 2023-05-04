@@ -1,7 +1,8 @@
 from django.db import models
+from django.db.models.query import QuerySet
 
 # Create your models here.
-
+ 
 
 class Category(models.Model):
     title = models.CharField(max_length=255)
@@ -20,6 +21,12 @@ class Promotion(models.Model):
     
 
 
+class ProductManager(models.Manager):
+    def available(self):
+        return self.filter(inventory__gt=0)
+    
+
+
 class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='products')
     title = models.CharField(max_length=255)
@@ -30,6 +37,7 @@ class Product(models.Model):
     inventory = models.PositiveIntegerField()
     date_time_created = models.DateTimeField(auto_now_add=True)
     date_time_modified = models.DateTimeField(auto_now=True)
+    objects = ProductManager()
 
     class Meta:
         ordering = ('-date_time_created',)
