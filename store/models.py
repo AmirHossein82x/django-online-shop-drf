@@ -1,6 +1,8 @@
 from django.db import models
 from django.db.models.query import QuerySet
 
+from config import settings
+
 # Create your models here.
  
 
