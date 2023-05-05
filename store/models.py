@@ -59,3 +59,17 @@ class Product(models.Model):
 class ProductCover(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='products')
+
+
+class Review(models.Model):
+    CHOICES = [
+        ('1', 'I recomend this product'),
+        ('2', 'This product is awfull'),
+        ('3', 'I have no idea')
+    ]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reviews')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    description = models.TextField()
+    date_time_created = models.DateTimeField(auto_now_add=True)
+    is_recomended = models.CharField(choices=CHOICES, max_length=1)
+    is_show = models.BooleanField(default=False)

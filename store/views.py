@@ -5,8 +5,10 @@ from rest_framework.filters import SearchFilter
 from rest_framework import permissions
 
 
-from .models import Product, ProductCover
-from .serializer import ProductSerializer, ProductCoverSerializer
+from .models import Product, ProductCover, Review
+from .serializer import ProductSerializer,\
+      ProductCoverSerializer, ReviewShowSerializer,\
+          ReviewCreateSerializer, ReviewShowAdminSerializer, ReviewUpdateSerializer
 from .permission import IsAdminOrReadOnly
 from .filter import ProductFilter
 
@@ -32,5 +34,44 @@ class ProductCoverViewSet(ModelViewSet):
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
+        context['product'] = get_object_or_404(Product, slug=self.kwargs['product_slug'])
+        return context
+    
+
+class ReviewViewSet(ModelViewSet):
+    http_method_names = ['get', 'post', 'patch']
+
+    def get_permissions(self):
+        if self.request.method == 'PATCH':
+            return [permissions.IsAdminUser()]
+        elif self.request.method == 'POST':
+            return [permissions.IsAuthenticated()]
+        else:
+            return [permissions.AllowAny()]
+
+    
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Review.objects.filter(product__slug=self.kwargs['product_slug'])
+        return Review.objects.filter(product__slug=self.kwargs['product_slug'], is_show=True)
+    
+    def get_serializer_class(self):
+
+        if self.request.method == 'POST':
+            return ReviewCreateSerializer
+        
+        elif self.request.method == 'GET' and self.request.user.is_staff:
+            return ReviewShowAdminSerializer
+        
+        elif self.request.method == 'GET' and not self.request.user.is_staff:
+            return ReviewShowSerializer
+        
+        elif self.request.method == 'PATCH':
+            return ReviewUpdateSerializer
+
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['user'] = self.request.user
         context['product'] = get_object_or_404(Product, slug=self.kwargs['product_slug'])
         return context
