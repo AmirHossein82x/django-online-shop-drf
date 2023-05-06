@@ -1,9 +1,9 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from django.db.models import Q
+from decimal import Decimal
+from django.db.models import Q, F
 
-from .models import Product, Category, ProductCover, Review
-from .cart import Cart
+from .models import Product, Category, ProductCover, Review, Cart, CartItem
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -83,34 +83,70 @@ class ReviewUpdateSerializer(serializers.ModelSerializer):
         fields = ('is_show',)
 
 
-class CartSerializer(serializers.Serializer):
+class CartItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer()
+    price = serializers.SerializerMethodField()
+
+    def get_price(self, obj):
+        return obj.product.final_price() * obj.quantity
+    
+    class Meta:
+        model = CartItem
+        fields = ('id', 'product', 'quantity', 'price')
+
+
+class CartSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+    items = CartItemSerializer(many=True, read_only=True)
+    total_price = serializers.SerializerMethodField()
+
+    def get_total_price(self, obj):
+        return sum(item.product.final_price() * item.quantity for item in obj.items.all())
+    
+    class Meta:
+        model = Cart
+        fields = ('id', 'items', 'total_price')
+
+
+class CartItemAddSerializer(serializers.ModelSerializer):
     product = serializers.IntegerField()
     quantity = serializers.IntegerField()
 
-    def validate_product(self, value):
+    def validate_product_id(self, value):
         if Product.objects.filter(Q(id=value) & Q(inventory__gt=0)).exists():
             return value
-        raise serializers.ValidationError('this product is not available')
+        raise serializers.ValidationError({'product id not valid'})
     
+    def save(self, **kwargs):
+        cart = get_object_or_404(Cart, pk=self.context['cart_id'])
+        if CartItem.objects.filter(cart=cart).exists():
+            instance = CartItem.objects.filter(product_id=self.validated_data['product']).\
+                update(quantity=F('quantity') + self.validated_data['quantity'])
+            return instance
+        
+        instance = CartItem.objects.create(cart=cart, product_id=self.validated_data['product'], quantity=self.validated_data['quantity'])
+        return instance
 
-    def validate_quantity(self, value):
-        if value > 0:
-            return value
-        raise serializers.ValidationError('this product is not available')
+    # def create(self, validated_data):
+    #     cart = get_object_or_404(Cart, pk=self.context['cart_id'])
+    #     if CartItem.objects.filter(cart=cart).exists():
+    #         instance = CartItem.objects.filter(product_id=self.validated_data['product']).\
+    #             update(quantity=F('quantity') + self.validated_data['quantity'])
+    #         return instance
+        
+    #     instance = CartItem.objects.create(cart=cart, product_id=self.validated_data['product'], quantity=self.validated_data['quantity'])
+    #     return instance
+        
     
+    class Meta:
+        model = CartItem
+        fields = ('product', 'quantity')
 
-    def create(self, validated_data):
-        cart = Cart(self.context['request'])
-        product = get_object_or_404(Product, pk=validated_data['product'])
-        quantity = validated_data.get('quantity')
-        cart.add_product(product, quantity)
-        return cart
+        
+   
         
 
-
-
-
-
-
-
-
+class CartItemUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartItem
+        fields = ('quantity',)

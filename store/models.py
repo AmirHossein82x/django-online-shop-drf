@@ -1,5 +1,6 @@
 from django.db import models
-from django.db.models.query import QuerySet
+from django.core.validators import MinValueValidator
+from uuid import uuid4
 
 from config import settings
 
@@ -73,3 +74,17 @@ class Review(models.Model):
     date_time_created = models.DateTimeField(auto_now_add=True)
     is_recomended = models.CharField(choices=CHOICES, max_length=1)
     is_show = models.BooleanField(default=False)
+
+
+class Cart(models.Model):
+    id = models.UUIDField(default=uuid4, primary_key=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+
+    class Meta:
+        unique_together = [('cart', 'product')]
