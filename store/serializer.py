@@ -1,6 +1,9 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
+from django.db.models import Q
 
 from .models import Product, Category, ProductCover, Review
+from .cart import Cart
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -78,6 +81,30 @@ class ReviewUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ('is_show',)
+
+
+class CartSerializer(serializers.Serializer):
+    product = serializers.IntegerField()
+    quantity = serializers.IntegerField()
+
+    def validate_product(self, value):
+        if Product.objects.filter(Q(id=value) & Q(inventory__gt=0)).exists():
+            return value
+        raise serializers.ValidationError('this product is not available')
+    
+
+    def validate_quantity(self, value):
+        if value > 0:
+            return value
+        raise serializers.ValidationError('this product is not available')
+    
+
+    def create(self, validated_data):
+        cart = Cart(self.context['request'])
+        product = get_object_or_404(Product, pk=validated_data['product'])
+        quantity = validated_data.get('quantity')
+        cart.add_product(product, quantity)
+        return cart
         
 
 

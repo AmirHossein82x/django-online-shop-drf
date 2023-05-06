@@ -1,16 +1,22 @@
 from django.shortcuts import get_object_or_404
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ViewSet
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
 from rest_framework import permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+import json
+from decimal import Decimal
 
 
 from .models import Product, ProductCover, Review
 from .serializer import ProductSerializer,\
       ProductCoverSerializer, ReviewShowSerializer,\
-          ReviewCreateSerializer, ReviewShowAdminSerializer, ReviewUpdateSerializer
+          ReviewCreateSerializer, ReviewShowAdminSerializer, ReviewUpdateSerializer, CartSerializer
 from .permission import IsAdminOrReadOnly
 from .filter import ProductFilter
+from .cart import Cart
 
 # Create your views here.
 
@@ -75,3 +81,36 @@ class ReviewViewSet(ModelViewSet):
         context['user'] = self.request.user
         context['product'] = get_object_or_404(Product, slug=self.kwargs['product_slug'])
         return context
+    
+
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
+    
+
+class CartViewSet(ViewSet):
+    
+    @action(detail=False, methods=['get'])
+    def view(self, request):
+        cart = Cart(request)
+        cart_items_list = []
+        for item in cart:
+            cart_items = {}
+            cart_items['product_id'] = item['obj'].id
+            cart_items['quantity'] = item['quantity']
+            cart_items['price'] = Decimal(item['price'])
+            cart_items_list.append(cart_items)
+        json_data = json.dumps(cart_items_list, cls=DecimalEncoder)
+        return Response(json_data)
+    
+    @action(detail=False, methods=['post'])
+    def add(self, request):
+        serializer = CartSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response('ok')
+    
+    
