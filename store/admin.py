@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List, Optional, Tuple
 from urllib.parse import urlencode
 from django.contrib import admin
 from django.db.models import Count
@@ -7,7 +7,7 @@ from django.http.request import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Product, Category, Promotion, ProductCover
+from .models import Customer, Product, Category, Promotion, ProductCover
 # Register your models here.
 
 
@@ -110,3 +110,37 @@ class ProductAdmin(admin.ModelAdmin):
             kwargs["queryset"] = Category.objects.filter(is_active=True).order_by('title')
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    
+
+class CustomerFilter(admin.SimpleListFilter):
+    title = 'member'
+    parameter_name = 'member'
+
+    def lookups(self, request: Any, model_admin: Any) -> List[Tuple[Any, str]]:
+        if Customer.objects.filter(status='1').exists():
+            yield ('1', 'Gold')
+
+        if Customer.objects.filter(status='2').exists():
+            yield ('2', 'Silver')
+
+        if Customer.objects.filter(status='3').exists():
+            yield ('3', 'Bronze')
+
+    def queryset(self, request: Any, queryset: QuerySet[Any]) -> QuerySet[Any]:
+        if self.value() == '1':
+            return queryset.filter(status='1')
+        
+        if self.value() == '2':
+            return queryset.filter(status='2')
+        
+        if self.value() == '3':
+            return queryset.filter(status='3')
+        
+
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ('user', 'status', 'address', 'postal_code')
+    search_fields = ('user__username__istartswith',)
+    list_select_related = ['user']
+    list_filter = [CustomerFilter]
+

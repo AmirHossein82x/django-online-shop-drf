@@ -6,3 +6,6 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 class CustomUser(AbstractUser):
     phone_number = PhoneNumberField(region='IR', blank=True, null=True)
+
+    def __str__(self) -> str:
+        return self.username

@@ -88,3 +88,20 @@ class CartItem(models.Model):
 
     class Meta:
         unique_together = [('cart', 'product')]
+
+
+class Customer(models.Model):
+
+    MEMBER_SHIP = [
+        ('1', 'Gold'),
+        ('2', 'Silver'),
+        ('3', 'Bronze')
+    ]
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    status = models.CharField(max_length=1, choices=MEMBER_SHIP, default='3')
+    address = models.CharField(max_length=512, null=True)
+    postal_code = models.CharField(max_length=10, null=True)
+
+    def __str__(self) -> str:
+        return self.user.username
