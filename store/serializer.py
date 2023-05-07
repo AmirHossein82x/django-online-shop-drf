@@ -3,7 +3,7 @@ from rest_framework import serializers
 from decimal import Decimal
 from django.db.models import Q, F
 
-from .models import Product, Category, ProductCover, Review, Cart, CartItem
+from .models import Customer, Product, Category, ProductCover, Review, Cart, CartItem
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -150,3 +150,15 @@ class CartItemUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartItem
         fields = ('quantity',)
+
+
+class CustomerSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+    email = serializers.SerializerMethodField(read_only=True)
+
+    def get_email(self, obj):
+        return obj.user.username
+    
+    class Meta:
+        model = Customer
+        fields = ('user', 'email', 'status', 'postal_code')

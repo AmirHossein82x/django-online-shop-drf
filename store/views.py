@@ -4,18 +4,20 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter
 from rest_framework import permissions
 from rest_framework import mixins
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 
 
 
 
-from .models import Product, ProductCover, Review, Cart, CartItem
+from .models import Customer, Product, ProductCover, Review, Cart, CartItem
 from .serializer import ProductSerializer,\
       ProductCoverSerializer, ReviewShowSerializer,\
           ReviewCreateSerializer, ReviewShowAdminSerializer,\
               ReviewUpdateSerializer, CartSerializer,\
                 CartItemAddSerializer, CartItemUpdateSerializer,\
-                CartItemSerializer
+                    CartItemSerializer, CustomerSerializer
 from .permission import IsAdminOrReadOnly
 from .filter import ProductFilter
 
@@ -115,4 +117,28 @@ class CartItemViewSet(ModelViewSet):
         context = super().get_serializer_context()
         context['cart_id'] = self.kwargs['cart_pk']
         return context
+    
+    
+class CustomerViewSet(ModelViewSet):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    @action(detail=True)
+    def history(self, request, pk):
+        return Response('ok')
+
+    @action(detail=False, methods=['GET', 'PUT'], permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        customer = Customer.objects.get(
+            user_id=request.user.id)
+        if request.method == 'GET':
+            serializer = CustomerSerializer(customer)
+            return Response(serializer.data)
+        elif request.method == 'PUT':
+            serializer = CustomerSerializer(customer, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
 
