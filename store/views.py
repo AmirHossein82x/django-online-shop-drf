@@ -6,18 +6,23 @@ from rest_framework import permissions
 from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework import status
 
 
 
 
 
-from .models import Customer, Product, ProductCover, Review, Cart, CartItem
+from .models import Customer, Product, ProductCover,\
+    Review, Cart, CartItem, Order, OrderItem
+
+
 from .serializer import ProductSerializer,\
       ProductCoverSerializer, ReviewShowSerializer,\
           ReviewCreateSerializer, ReviewShowAdminSerializer,\
               ReviewUpdateSerializer, CartSerializer,\
                 CartItemAddSerializer, CartItemUpdateSerializer,\
-                    CartItemSerializer, CustomerSerializer
+                    CartItemSerializer, CustomerSerializer,\
+                          OrderCreateSerializer, OrderShowSerializer, OrderUpdateSerializer
 from .permission import IsAdminOrReadOnly
 from .filter import ProductFilter
 
@@ -140,5 +145,47 @@ class CustomerViewSet(ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
+        
+
+class OrderViewSet(mixins.CreateModelMixin,
+                    mixins.ListModelMixin,
+                    mixins.UpdateModelMixin,
+                      GenericViewSet):
+    
+    http_method_names = ['get', 'post', 'patch']
+    
+    def get_permissions(self):
+        if self.request.method == 'PATCH':
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
+        
+    
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Order.objects.all().select_related('customer__user').prefetch_related('items__product')
+        return Order.objects.filter(customer__user=self.request.user).select_related('customer__user').prefetch_related('items__product')
+    
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return OrderShowSerializer
+        if self.request.method == 'POST':
+            return OrderCreateSerializer
+        if self.request.method == 'PATCH':
+            return OrderUpdateSerializer
+        
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['customer'] = get_object_or_404(Customer, user=self.request.user)
+        return context
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+        serializer = OrderShowSerializer(order)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 
