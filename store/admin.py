@@ -7,7 +7,7 @@ from django.http.request import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Customer, Product, Category, Promotion, ProductCover
+from .models import Customer, Order, OrderItem, Product, Category, Promotion, ProductCover
 # Register your models here.
 
 
@@ -144,3 +144,35 @@ class CustomerAdmin(admin.ModelAdmin):
     list_select_related = ['user']
     list_filter = [CustomerFilter]
 
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('username',
+                     'address','postal_code',
+                       'total_price',
+                         'date_time_created','status', 'is_delivered')
+    search_fields = ('customer__postal_code__istartswith',)
+    inlines = [OrderItemInline]
+    list_select_related = ['customer__user']
+    list_filter = ['is_delivered']
+
+
+    def username(self, obj):
+        return obj.customer.user.username
+    
+    def address(self, obj):
+        return obj.customer.address
+    
+    def total_price(self, obj):
+        return sum(item.price for item in obj.items.all())
+    
+    def postal_code(self, obj):
+        return obj.customer.postal_code
+    
+    def status(self, obj):
+        return obj.customer.status

@@ -105,3 +105,19 @@ class Customer(models.Model):
 
     def __str__(self) -> str:
         return self.user.username
+    
+
+class Order(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='orders')
+    date_time_created = models.DateTimeField(auto_now_add=True)
+    is_delivered = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ('-date_time_created',)
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.DO_NOTHING)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    price = models.DecimalField(max_digits=6, decimal_places=3)
