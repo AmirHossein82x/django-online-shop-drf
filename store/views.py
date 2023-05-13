@@ -7,6 +7,7 @@ from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
+from .pagination import DefalutPageNumberPagination
 
 
 
@@ -30,12 +31,13 @@ from .filter import ProductFilter
 # Create your views here.
 
 class ProductViewSet(ModelViewSet):
-    queryset = Product.objects.available().select_related('promotion').select_related('category')
+    queryset = Product.objects.available().select_related('promotion').select_related('category').prefetch_related('images')
     serializer_class = ProductSerializer
     lookup_field = 'slug'
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     # filterset_fields = ('category',)
+    pagination_class = DefalutPageNumberPagination
     filterset_class = ProductFilter
     search_fields = ('^title', )
 
